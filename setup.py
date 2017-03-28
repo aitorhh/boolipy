@@ -41,7 +41,7 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
     install_requires=[
-        'scrapy'
+        'requests'
     ],
 
 
@@ -51,7 +51,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dev': [],
-        'test': ['mock', 'coverage'],
+        'test': ['responses', 'mock', 'coverage', 'pytest'],
     },
 
     entry_points={
