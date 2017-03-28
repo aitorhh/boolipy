@@ -1,6 +1,6 @@
 # boolipy
 Scrapy service to access Booli api. To be able to use the service you need to
-(request access to the API)[https://www.booli.se/api/key].
+[request access to the API](https://www.booli.se/api/key).
 
 # Booli API
 
