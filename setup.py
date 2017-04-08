@@ -51,7 +51,7 @@ setup(
     # $ pip install -e .[dev,test]
     extras_require={
         'dev': [],
-        'test': ['responses', 'mock', 'coverage', 'pytest'],
+        'test': ['responses', 'mock', 'pytest-cov', 'pytest'],
     },
 
     entry_points={

@@ -48,13 +48,16 @@ class Api():
 
         return response
 
-    def get_listings(self, parameters=None):
+    def get_listings(self, query, parameters=None):
+        if parameters is None:
+            parameters = {}
+        parameters.update({"q": query})
         return self.get(endpoint='listings',
-                        paramters=parameters)
+                        parameters=parameters)
 
-    def get_areas(self, parameters=None):
+    def get_areas(self, query, parameters=None):
+        if parameters is None:
+            parameters = {}
+        parameters.update({"q": query})
         return self.get(endpoint='areas',
-                        paramters=parameters)
-
-
-
+                        parameters=parameters)

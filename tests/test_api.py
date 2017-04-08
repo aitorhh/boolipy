@@ -9,15 +9,9 @@ import random
 logger = logging.getLogger(__name__)
 
 
-class TestApi(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        pass
+class TestApi:
 
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.set_references()
         self.patch_time()
@@ -25,6 +19,10 @@ class TestApi(unittest.TestCase):
 
         # repeability
         random.seed(__name__)
+
+        yield
+        self.settingspatcher.stop()
+        self.timepatcher.stop()
 
     def patch_settings(self):
         self.settingsmock = mock.Mock(name='settings')
@@ -41,7 +39,6 @@ class TestApi(unittest.TestCase):
         self.timepatcher = mock.patch('boolipy.api.time',
                                           self.timemock)
         self.timepatcher.start()
-
         self.timemock.time.return_value = self.timeref
 
     def mock_api(self):
@@ -52,10 +49,6 @@ class TestApi(unittest.TestCase):
         apimock.API_ENDPOINT = self.apiendpoint
 
         return apimock
-
-    def tearDown(self):
-        self.settingspatcher.stop()
-        self.timepatcher.stop()
 
     def set_references(self):
         self.apiendpoint = 'https://api.booli.se'
@@ -70,6 +63,7 @@ class TestApi(unittest.TestCase):
                             "time": self.timerefstr,
                             "unique": self.unique,
                             "hash": self.hashref}
+        self.urlparam = "https://api.booli.se/{endpoint}?q={query}&unique={unique}&hash={hash}&callerId={callerid}&time={time}"
         self.url = "https://api.booli.se/listings?q=nacka&unique={unique}&hash={hash}&callerId={callerid}&time={time}".format(unique=self.unique, hash=self.hashref, callerid=self.callerid, time=self.timerefstr)
 
     def test_set_auth(self):
@@ -92,6 +86,24 @@ class TestApi(unittest.TestCase):
                            auth=self.authdictref)
         assert responses.calls[0].request.url == self.url
         assert response.status_code == 200
+
+    @pytest.mark.parametrize("endpoint,query", [
+            ("listings", "nacka"),
+            ("areas", "nacka")
+    ])
+    def test_get_endpoints(self, endpoint, query):
+        from boolipy.api import Api
+        url = self.urlparam.format(endpoint=endpoint,
+                                   query=query,
+                                   unique=self.unique,
+                                   hash=self.hashref,
+                                   callerid=self.callerid,
+                                   time=self.timerefstr)
+        apimock = self.mock_api()
+        get_endpoint = getattr(Api, "get_{}".format(endpoint))
+        response = get_endpoint(apimock, query=query)
+        apimock.get.assert_called_once_with(endpoint=endpoint,
+                                            parameters={"q": query})
 
     @pytest.mark.skip()
     def test_get_real(self):
