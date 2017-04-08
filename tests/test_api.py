@@ -1,8 +1,10 @@
 import logging
+import responses
 import unittest
+import pytest
 import mock
+import random
 
-from boolipy import api
 
 logger = logging.getLogger(__name__)
 
@@ -17,26 +19,83 @@ class TestApi(unittest.TestCase):
         pass
 
     def setUp(self):
+        self.set_references()
+        self.patch_time()
+        self.patch_settings()
+
+        # repeability
+        random.seed(__name__)
+
+    def patch_settings(self):
         self.settingsmock = mock.Mock(name='settings')
-        self.settingsmock.CALLER_ID = 'my-caller-id'
-        self.settingsmock.PRIVATE_KEY = 'my-private-key'
+        self.settingsmock.CALLER_ID = self.callerid
+        self.settingsmock.PRIVATE_KEY = self.privatekey
 
         # enable patcher
-        self.settingspatcher = mock.patch('boolipy.settings', 
+        self.settingspatcher = mock.patch('boolipy.settings',
                                           self.settingsmock)
         self.settingspatcher.start()
 
+    def patch_time(self):
+        self.timemock = mock.Mock(name='time')
+        self.timepatcher = mock.patch('boolipy.api.time',
+                                          self.timemock)
+        self.timepatcher.start()
+
+        self.timemock.time.return_value = self.timeref
+
+    def mock_api(self):
+        import boolipy
+        apimock = mock.Mock(name='api', spec=boolipy.api.Api)
+        apimock.callerid = self.callerid
+        apimock.privatekey = self.privatekey
+        apimock.API_ENDPOINT = self.apiendpoint
+
+        return apimock
 
     def tearDown(self):
         self.settingspatcher.stop()
+        self.timepatcher.stop()
+
+    def set_references(self):
+        self.apiendpoint = 'https://api.booli.se'
+        self.timeref = 1491633575.83
+        self.timerefstr = "1491633575"
+        self.callerid = 'my-caller-id'
+        self.privatekey = 'my-private-key'
+        self.unique = "L5OXU9YZBRR4Y90D"
+        self.hashref = "8f485a367b7ae7940709d3cd5cebcba4dde59791"
+
+        self.authdictref = {"callerId": self.callerid,
+                            "time": self.timerefstr,
+                            "unique": self.unique,
+                            "hash": self.hashref}
+        self.url = "https://api.booli.se/listings?q=nacka&unique={unique}&hash={hash}&callerId={callerid}&time={time}".format(unique=self.unique, hash=self.hashref, callerid=self.callerid, time=self.timerefstr)
 
     def test_set_auth(self):
-        pass
+        from boolipy.api import Api
+        apimock = self.mock_api()
+        authdict = Api.set_auth(apimock)
+        assert authdict == self.authdictref
 
+    @responses.activate
     def test_get(self):
-        pass
+        from boolipy.api import Api
+        apimock = self.mock_api()
+        responses.add(responses.GET, self.apiendpoint + "/listings",
+                      status=200,
+                      body='{}',
+                      content_type='application/json')
+        response = Api.get(apimock,
+                           endpoint='listings',
+                           parameters={'q': 'nacka'},
+                           auth=self.authdictref)
+        assert responses.calls[0].request.url == self.url
+        assert response.status_code == 200
 
+    @pytest.mark.skip()
     def test_get_real(self):
+        from boolipy import api
         api_obj = api.Api()
         response = api_obj.get(endpoint='listings',
                                parameters={'q': 'nacka'})
