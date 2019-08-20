@@ -1,12 +1,12 @@
 import os
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
-CALLER_ID = "not set"
-PRIVATE_KEY = "not set"
 try:
-    CALLER_ID = os.environ["CALLER_ID"]
-    PRIVATE_KEY = os.environ["PRIVATE_KEY"]
+    CALLER_ID=os.environ["CALLER_ID"]
+    PRIVATE_KEY=os.environ["PRIVATE_KEY"]
 except KeyError as e:
-    logger.error("boolipy requires CALLER_ID and PRIVATE_KEY from the environment")
+    CALLER_ID=None
+    PRIVATE_KEY=None

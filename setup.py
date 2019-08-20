@@ -56,7 +56,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'boolipy=boolipy:main',
+            'boolipy=boolipy:run',
         ],
     },
 )
