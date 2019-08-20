@@ -4,6 +4,7 @@ import os
 
 from . import settings
 from . import common
+from .common import printp
 from . import api
 
 
@@ -12,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def run():
-    parser = argparse.ArgumentParser(description="Access to Booli API")
+    parser = argparse.ArgumentParser(description="Access to Booli API",
+                                     epilog="For more information about API parameters and endpoints visit https://www.booli.se/p/api")
 
     ## ACTIONS GROUPS
     actiong = parser.add_mutually_exclusive_group(required=True)
@@ -24,7 +26,7 @@ def run():
 
     actiong.add_argument("--endpoint",
                          dest="endpoint",
-                         help="name of the API endpoint. Options: {listings, areas, sold}. For more detail: https://www.booli.se/p/api/referens/")
+                         help="name of the API endpoint. Options: {listings, areas, sold}")
 
     ## CONFIGURATION GROUP
     confg = parser.add_argument_group('configuration')
@@ -50,7 +52,10 @@ def run():
                         help="If you want to search around a center coordinates this is the dimension of the rectangle around, in meters. Example: 400,500")
 
 
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
+    keypairs = dict([unknown[i:i+2] for i in range(0, len(unknown), 2) if not (unknown[i+1:i+2]+["--"])[0].startswith("--")])
+
+    flags = [unknown[i] for i in range(0, len(unknown), 2) if (unknown[i+1:i+2]+["--"])[0].startswith("--")]
 
     # set the settings from the arguments
     if args.caller_id:
@@ -61,6 +66,16 @@ def run():
     if settings.PRIVATE_KEY is None or settings.CALLER_ID is None:
         print(common.PREFIX + common.bcolors.FAIL + " Either PRIVATE KEY or CALLER ID is missing. Please set the environemtnal variable or provide the arguments" + common.bcolors.ENDC)
         return -1
+
+    printp("Configuration")
+    print("\t\t Endpoint: {:<20}".format(repr(args.endpoint)))
+    print("\t\t CallerId: {:<20}".format(repr(args.caller_id)))
+    print("\t\t Center: {:<20}".format(repr(args.center)))
+    print("\t\t Dim: {:<20}".format(repr(args.dim)))
+
+    for k, v in keypairs:
+        print("\t\t {}: {:<20}".format(k, repr(v)))
+
 
     ### TEST
     ########
@@ -74,7 +89,8 @@ def run():
     ############
     if args.endpoint and args.endpoint in api.Api.VALID_ENDPOINTS:
         apiobj = api.Api()
-        apiobj.get(endpoint=args.endpoint, parameters={})
+        apiobj.get(endpoint=args.endpoint, parameters=keypairs)
+
     elif args.endpoint:
         print(common.PREFIX + common.bcolors.FAIL + "{} not a valid endpoint".format(repr(args.endpoint)) + common.bcolors.ENDC)
     else:

@@ -19,3 +19,5 @@ class bcolors:
 
 
 PREFIX = bcolors.BOLD + "Boolipy >> " + bcolors.ENDC
+
+def printp(x): print(PREFIX + x)
