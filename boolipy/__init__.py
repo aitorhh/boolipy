@@ -2,10 +2,10 @@ import logging
 import argparse
 import os
 
+from . import api
 from . import settings
 from . import common
 from .common import printp
-from . import api
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -53,7 +53,8 @@ def run():
 
 
     args, unknown = parser.parse_known_args()
-    keypairs = dict([unknown[i:i+2] for i in range(0, len(unknown), 2) if not (unknown[i+1:i+2]+["--"])[0].startswith("--")])
+    keypairs = dict([unknown[i:i+2] for i in range(0, len(unknown), 1) if unknown[i].startswith("--") and not (unknown[i+1:i+2]+["--"])[0].startswith("--")])
+    keypairs = {k.replace("--", ""): v for k, v in keypairs.items()}
 
     flags = [unknown[i] for i in range(0, len(unknown), 2) if (unknown[i+1:i+2]+["--"])[0].startswith("--")]
 
@@ -64,16 +65,17 @@ def run():
         settings.PRIVATE_KEY = args.private_key
 
     if settings.PRIVATE_KEY is None or settings.CALLER_ID is None:
-        print(common.PREFIX + common.bcolors.FAIL + " Either PRIVATE KEY or CALLER ID is missing. Please set the environemtnal variable or provide the arguments" + common.bcolors.ENDC)
+        printp(common.bcolors.FAIL + " Either PRIVATE KEY or CALLER ID is missing. Please set the environemtnal variable or provide the arguments" + common.bcolors.ENDC)
         return -1
 
-    printp("Configuration")
+    printp("Arguments")
     print("\t\t Endpoint: {:<20}".format(repr(args.endpoint)))
     print("\t\t CallerId: {:<20}".format(repr(args.caller_id)))
     print("\t\t Center: {:<20}".format(repr(args.center)))
     print("\t\t Dim: {:<20}".format(repr(args.dim)))
 
-    for k, v in keypairs:
+    printp("Unrecognized arguments (as parameters to requests)")
+    for k, v in keypairs.items():
         print("\t\t {}: {:<20}".format(k, repr(v)))
 
 
@@ -82,7 +84,7 @@ def run():
     if args.test:
         ret = test()
         if ret < 0:
-            print(common.PREFIX + common.bcolors.FAIL + "API test not working" + common.bcolors.ENDC)
+            printp(common.bcolors.FAIL + "API test not working" + common.bcolors.ENDC)
         return ret
 
     ### ENDPOINT
@@ -92,10 +94,10 @@ def run():
         apiobj.get(endpoint=args.endpoint, parameters=keypairs)
 
     elif args.endpoint:
-        print(common.PREFIX + common.bcolors.FAIL + "{} not a valid endpoint".format(repr(args.endpoint)) + common.bcolors.ENDC)
+        printp(common.bcolors.FAIL + "{} not a valid endpoint".format(repr(args.endpoint)) + common.bcolors.ENDC)
     else:
         ## never should get here since argsparse takes care of it
-        print(common.PREFIX + common.bcolors.FAIL + "No action requested".format(repr(args.endpoint)) + common.bcolors.ENDC)
+        printp(common.bcolors.FAIL + "No action requested".format(repr(args.endpoint)) + common.bcolors.ENDC)
         parser.print_help()
 
 
@@ -103,7 +105,7 @@ def run():
 def test(apiobj=None):
     if apiobj is None:
         apiobj = api.Api()
-    print(common.PREFIX + "Get endpoints")
+    printp("Get endpoints")
     res = apiobj.get_areas(query="kungsholmen")
     if res is None:
         return -1

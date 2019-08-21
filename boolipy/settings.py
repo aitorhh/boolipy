@@ -10,3 +10,6 @@ try:
 except KeyError as e:
     CALLER_ID=None
     PRIVATE_KEY=None
+
+
+DEFAULT_LIMIT = 100
