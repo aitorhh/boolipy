@@ -35,7 +35,43 @@ class Api():
                 "hash": hashstr
                }
 
-    def get(self, endpoint, parameters, auth=None):
+    def get(self, endpoint, parameters=None, responses_acc=None, auth=None):
+        logger.debug("Get endpoint {} with {}".format(repr(endpoint), parameters))
+        if responses_acc is None:
+            responses_acc = []
+
+        if parameters is None:
+            parameters = {"limit": settings.DEFAULT_LIMIT}
+
+        response = self.get_endpoint(endpoint = endpoint,
+                                     parameters = parameters,
+                                     auth = auth)
+
+        if response.ok:
+            dinit = response.json()
+            # start acumulating
+            responses_acc.append(dinit)
+
+            # deal with pagination
+            total_count = dinit["total_count"]
+            count = dinit["count"]
+            offset = dinit["offset"]
+
+            # stop accumulating when offset > total_count
+            if offset >= total_count:
+                return responses_acc
+            else:
+                # keep requesting
+                nparams = parameters.copy()
+                nparams.update({"offset": count})
+                return self.get(endpoint = endpoint,
+                                parameters = parameters,
+                                responses_acc = responses_acc)
+
+        return responses_acc
+
+
+    def get_endpoint(self, endpoint, parameters, auth):
         if not auth:
             auth = self.set_auth()
         params = {}
@@ -48,10 +84,10 @@ class Api():
         response = requests.get(url, params=params)
 
         if response.ok:
-            return response.content
+            return response
 
         logger.error("API error: {}".format(response.content))
-        return None
+        return response
 
     def get_listings(self, query=None, parameters=None):
         if parameters is None:

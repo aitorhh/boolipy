@@ -4,6 +4,7 @@ import unittest
 import pytest
 import mock
 import random
+import json
 
 
 logger = logging.getLogger(__name__)
@@ -50,7 +51,41 @@ class TestApi:
 
         return apimock
 
+    def mock_endpoint(self, endpoint, ok = True,
+                      total_count = 100,
+                      offset = 0,
+                      count = 10):
+        responsemock = mock.Mock(name='response')
+
+        json = {"total_count": total_count,
+                "offset": offset,
+                "count": count,
+                endpoint: [],
+               }
+        responsemock.json.return_value = json
+        responsemock.ok = ok
+
+        return responsemock
+
+
+    def responses_get_endpoint(self, endpoint,
+                              total_count = 100,
+                              offset = 0,
+                              count = 10):
+        body = {"total_count": total_count,
+                "offset": offset,
+                "count": count
+               }
+        responses.add(responses.GET, self.apiendpoint + "/" + endpoint,
+                      status=200,
+                      body=json.dumps(body),
+                      content_type='application/json')
+
+
     def set_references(self):
+        from boolipy.settings import DEFAULT_LIMIT
+        self.default_parameters = {"limit": DEFAULT_LIMIT}
+
         self.apiendpoint = 'https://api.booli.se'
         self.timeref = 1491633575.83
         self.timerefstr = "1491633575"
@@ -73,26 +108,30 @@ class TestApi:
         assert authdict == self.authdictref
 
     @responses.activate
-    def test_get(self):
+    def test_get_endpoint(self):
         from boolipy.api import Api
         apimock = self.mock_api()
-        responses.add(responses.GET, self.apiendpoint + "/listings",
-                      status=200,
-                      body='{}',
-                      content_type='application/json')
-        response = Api.get(apimock,
-                           endpoint='listings',
-                           parameters={'q': 'nacka'},
-                           auth=self.authdictref)
+        endpoint = "listings"
+        self.responses_get_endpoint(endpoint = endpoint)
+
+        response = Api.get_endpoint(apimock,
+                                    endpoint=endpoint,
+                                    parameters={'q': 'nacka'},
+                                    auth=self.authdictref)
         assert responses.calls[0].request.url == self.url
         assert response.status_code == 200
 
+
     @pytest.mark.parametrize("endpoint,query", [
             ("listings", "nacka"),
+            ("sold", "nacka"),
             ("areas", "nacka")
     ])
-    def test_get_endpoints(self, endpoint, query):
+    def test_get_recursive(self, endpoint, query):
         from boolipy.api import Api
+        total_count = 100
+        limit = 10
+        offset = 0
         url = self.urlparam.format(endpoint=endpoint,
                                    query=query,
                                    unique=self.unique,
@@ -100,10 +139,51 @@ class TestApi:
                                    callerid=self.callerid,
                                    time=self.timerefstr)
         apimock = self.mock_api()
-        get_endpoint = getattr(Api, "get_{}".format(endpoint))
-        response = get_endpoint(apimock, query=query)
-        apimock.get.assert_called_once_with(endpoint=endpoint,
-                                            parameters={"q": query})
+        apimock.get_endpoint.return_value = self.mock_endpoint(endpoint = endpoint,
+                                                               total_count = total_count,
+                                                               offset = offset,
+                                                               count = limit
+                                                               )
+
+        response = Api.get(apimock, endpoint=endpoint)
+
+
+        # verify the output
+        apimock.get_endpoint.assert_called_once_with(endpoint = endpoint,
+                                                     parameters = self.default_parameters,
+                                                     auth = None)
+
+        # verify that the funcion continues requesting
+        assert apimock.get.call_count == 1
+
+    @pytest.mark.parametrize("endpoint,query", [
+            ("listings", "nacka"),
+            ("sold", "nacka"),
+            ("areas", "nacka")
+    ])
+    def test_get_recursive_end(self, endpoint, query):
+        from boolipy.api import Api
+        total_count = 100
+        limit = 10
+        offset = 100
+
+        apimock = self.mock_api()
+        apimock.get_endpoint.return_value = self.mock_endpoint(endpoint = endpoint,
+                                                               total_count = total_count,
+                                                               offset = offset,
+                                                               count = limit
+                                                               )
+        parameters = self.default_parameters
+        parameters.update({"offset": offset-limit})
+        response = Api.get(apimock, endpoint=endpoint, parameters = parameters)
+
+        # verify the output
+        apimock.get_endpoint.assert_called_once_with(endpoint = endpoint,
+                                                     parameters = parameters,
+                                                     auth = None)
+
+        # verify that the funcion continues requesting
+        assert apimock.get.call_count == 0
 
     @pytest.mark.skip()
     def test_get_real(self):
