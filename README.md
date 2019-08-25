@@ -1,6 +1,12 @@
 # boolipy
+
 Scrapy service to access Booli api. To be able to use the service you need to
 [request access to the API](https://www.booli.se/api/key).
+
+## DISCLAIMER
+
+This repository contains unofficial code. The author has nothing to do with
+Booli.
 
 ## Booli API
 
@@ -10,6 +16,7 @@ Of course, all of this is *powered by Booli*
 * [API endpoint](http://api.booli.se/)
 * [Interactive Console URL](http://www.booli.se/api/explorer)
 * [Terms Of Service URL](http://www.booli.se/api/tou/)
+
 
 ## Installation
 
@@ -40,13 +47,22 @@ pip install .[dev,test]
 
 ### CLI
 
-*Note*: The CLI support with arguments is not implementeed yet.
+To print the help:
+    ```
+    boolipy --help
+    ```
 
+Search the sold apartments around a given coordinate:
+    ```
+    boolipy --center "59.334438,18.029522" --dim "400,500" --endpoint sold --limit
+1000 --offset 0 --follow
+    ```
+
+### Jupyter-notebook
+
+To use jupyter notebook and all the analytics tools, install the dependencies:
 ```
-boolipy
+pip install -e .[analytics]
 ```
 
-# TODO
-
-- [] CLI arguments and options
-- [] Listen to an amqp queue to request new data
+And then execute the `jupyter-notebook`.
