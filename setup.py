@@ -41,7 +41,7 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
     install_requires=[
-        'requests'
+        'requests',
     ],
 
 
@@ -50,7 +50,13 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
-        'analytics': ['jupyter', 'pandas', 'matplotlib', 'seaborn', 'scipy'],
+        'analytics': ['jupyter',
+                      'pandas',
+                      'matplotlib',
+                      'seaborn',
+                      'scipy',
+                      'haversine',
+                      'folium'],
         'dev': [],
         'test': ['responses', 'mock', 'pytest-cov', 'pytest'],
     },
