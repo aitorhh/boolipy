@@ -40,6 +40,11 @@ def run():
                         default=settings.PRIVATE_KEY,
                         help="PRIVATE KEY obtained contating booly.se. Set by env variable: {}".format("True" if "PRIVATE_KEY" in os.environ else "False"))
 
+    confg.add_argument("--follow",
+                        dest="follow",
+                        action="store_true",
+                        default=False,
+                        help="Follow the requests when using pagination")
 
     ## PARAMETERS GROUP
     paramg = parser.add_argument_group('api parameters')
@@ -71,18 +76,21 @@ def run():
     printp("Arguments")
     print("\t\t Endpoint: {:<20}".format(repr(args.endpoint)))
     print("\t\t CallerId: {:<20}".format(repr(args.caller_id)))
+    print("\t\t Follow: {:<20}".format(repr(args.follow)))
     print("\t\t Center: {:<20}".format(repr(args.center)))
     print("\t\t Dim: {:<20}".format(repr(args.dim)))
 
-    printp("Unrecognized arguments (as parameters to requests)")
-    for k, v in keypairs.items():
-        print("\t\t {}: {:<20}".format(k, repr(v)))
+
+    if keypairs:
+        printp("Unrecognized arguments (as parameters to requests)")
+        for k, v in keypairs.items():
+            print("\t\t {}: {:<20}".format(k, repr(v)))
 
 
     ### TEST
     ########
     if args.test:
-        ret = test()
+        ret = test(follow=args.follow)
         if ret < 0:
             printp(common.bcolors.FAIL + "API test not working" + common.bcolors.ENDC)
         return ret
@@ -91,7 +99,10 @@ def run():
     ############
     if args.endpoint and args.endpoint in api.Api.VALID_ENDPOINTS:
         apiobj = api.Api()
-        apiobj.get(endpoint=args.endpoint, parameters=keypairs)
+        # add center and dim to keypairs
+        keypairs.update({"center": args.center})
+        keypairs.update({"dim": args.dim})
+        apiobj.get(endpoint=args.endpoint, parameters=keypairs, follow=args.follow)
 
     elif args.endpoint:
         printp(common.bcolors.FAIL + "{} not a valid endpoint".format(repr(args.endpoint)) + common.bcolors.ENDC)
@@ -102,14 +113,22 @@ def run():
 
 
 
-def test(apiobj=None):
+def test(apiobj=None, follow=False):
     if apiobj is None:
         apiobj = api.Api()
-    printp("Get endpoints")
-    res = apiobj.get_areas(query="kungsholmen")
+
+    printp("Get areas")
+    res = apiobj.get_areas(query="kungsholmen", follow=follow)
     if res is None:
         return -1
-    res = apiobj.get_listings(query="kungsholmen")
+
+    printp("Get listings")
+    res = apiobj.get_listings(query="kungsholmen", follow=follow)
+    if res is None:
+        return -1
+
+    printp("Get sold")
+    res = apiobj.get_listings(query="kungsholmen", follow=follow)
     if res is None:
         return -1
 

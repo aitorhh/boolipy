@@ -50,6 +50,7 @@ setup(
     # for example:
     # $ pip install -e .[dev,test]
     extras_require={
+        'analytics': ['jupyter', 'pandas', 'matplotlib', 'seaborn', 'scipy'],
         'dev': [],
         'test': ['responses', 'mock', 'pytest-cov', 'pytest'],
     },
