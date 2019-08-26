@@ -8,7 +8,7 @@ from . import common
 from .common import printp
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -45,6 +45,12 @@ def run():
                         action="store_true",
                         default=False,
                         help="Follow the requests when using pagination")
+
+    confg.add_argument("--no-cache",
+                        dest="cache",
+                        action="store_false",
+                        default=True,
+                        help="Use the cache data if available")
 
     ## PARAMETERS GROUP
     paramg = parser.add_argument_group('api parameters')
@@ -102,7 +108,8 @@ def run():
         # add center and dim to keypairs
         keypairs.update({"center": args.center})
         keypairs.update({"dim": args.dim})
-        apiobj.get(endpoint=args.endpoint, parameters=keypairs, follow=args.follow)
+        data = apiobj.get(endpoint=args.endpoint, parameters=keypairs, follow=args.follow)
+        print(data)
 
     elif args.endpoint:
         printp(common.bcolors.FAIL + "{} not a valid endpoint".format(repr(args.endpoint)) + common.bcolors.ENDC)
@@ -117,21 +124,13 @@ def test(apiobj=None, follow=False):
     if apiobj is None:
         apiobj = api.Api()
 
-    printp("Get areas")
-    res = apiobj.get_areas(query="kungsholmen", follow=follow)
-    if res is None:
-        return -1
-
-    printp("Get listings")
-    res = apiobj.get_listings(query="kungsholmen", follow=follow)
-    if res is None:
-        return -1
-
-    printp("Get sold")
-    res = apiobj.get_listings(query="kungsholmen", follow=follow)
-    if res is None:
-        return -1
-
+    for e in ["areas", "listings", "sold"]:
+        printp("Get {}".format(e))
+        res = apiobj.get(endpoint=e,
+                         parameters={"query": "kungsholmen"},
+                         follow=follow)
+        if res is None:
+            return -1
 
 if __name__ == '__main__':
     run()

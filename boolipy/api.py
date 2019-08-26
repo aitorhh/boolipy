@@ -1,4 +1,6 @@
 import logging
+import itertools
+import os
 
 from . import settings
 
@@ -39,7 +41,17 @@ class Api():
                }
 
     def get(self, endpoint, parameters=None,
-            responses_acc=None, auth=None, follow=False):
+            responses_acc=None, auth=None,
+            follow=False, cache=True):
+
+        hashstr = self._hash_request(endpoint, parameters, follow)
+
+        filename = os.path.join('data/', hashstr + '.json')
+        if cache and os.path.isfile(filename):
+            logger.info("Loading request from cache. Filename: {}".format(filename))
+            with open(filename, 'r') as f:
+                return json.load(f)
+
         logger.debug("Get endpoint {} with {} and follow pagination: {}".format(repr(endpoint), parameters, follow))
         if responses_acc is None:
             responses_acc = []
@@ -63,9 +75,7 @@ class Api():
             offset = dinit.get("offset", None)
 
             # stop accumulating when offset > total_count
-            if not follow or (total_count is None) or (limit is None) or (offset+limit) >= total_count :
-                return responses_acc
-            else:
+            if follow and (total_count is not None) and (limit is not None) and (offset+limit) < total_count :
                 # keep requesting
                 nparams = parameters.copy()
                 nparams.update({"offset": limit + offset})
@@ -74,8 +84,13 @@ class Api():
                                 responses_acc = responses_acc,
                                 follow = follow)
 
-        return responses_acc
+        fl = self._flattern_responses(endpoint, responses_acc)
+        if not cache:
+            return fl
+        return self._store_cache(endpoint, parameters, follow, fl)
 
+    def _flattern_responses(self, endpoint, responses_acc):
+        return list(itertools.chain.from_iterable([d[endpoint] for d in responses_acc]))
 
     def get_endpoint(self, endpoint, parameters, auth):
         if not auth:
@@ -95,26 +110,18 @@ class Api():
         logger.error("API error: {}".format(response.content))
         return response
 
-    def get_listings(self, query=None, parameters=None, follow=False):
-        if parameters is None:
-            parameters = {}
-        if query is not None:
-            parameters.update({"q": query})
-        return self.get(endpoint='listings',
-                        parameters=parameters,
-                        follow=follow)
+    def _hash_request(self, endpoint, parameters, follow):
+        return sha1(endpoint + json.dumps(parameters) + str(follow)).hexdigest()
 
-    def get_areas(self, query, parameters=None, follow=False):
-        if parameters is None:
-            parameters = {}
-        parameters.update({"q": query})
-        return self.get(endpoint='areas',
-                        parameters=parameters,
-                        follow=follow)
+    def _store_cache(self, endpoint, parameters, follow, responses_acc):
+        import os
+        hashstr = self._hash_request(endpoint, parameters, follow)
 
-    def get_sold(self, parameters=None, follow=False):
-        if parameters is None:
-            parameters = {}
-        return self.get(endpoint='sold',
-                        parameters=parameters,
-                        follow=follow)
+        filename = os.path.join('data/', hashstr + '.json')
+        with open(filename, 'w') as f:
+            json.dump(responses_acc, f)
+
+        return responses_acc
+
+
+
