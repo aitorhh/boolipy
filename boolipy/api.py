@@ -30,8 +30,8 @@ class Api():
         """ Set the authentification parameters """
         timestamp = str(int(time.time()))
         unique = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(16))
-        hashstr = sha1(self.callerid + timestamp +
-                       self.privatekey + unique).hexdigest()
+        hashstr = sha1((self.callerid + timestamp +
+                       self.privatekey + unique).encode('utf8')).hexdigest()
         logger.debug("Time from api {}".format(timestamp))
 
         return {"callerId": self.callerid,
@@ -111,15 +111,15 @@ class Api():
         return response
 
     def _hash_request(self, endpoint, parameters, follow):
-        return sha1(endpoint + json.dumps(parameters) + str(follow)).hexdigest()
+        return sha1((endpoint + json.dumps(parameters) + str(follow)).encode('utf8')).hexdigest()
 
     def _store_cache(self, endpoint, parameters, follow, responses_acc):
-        import os
         hashstr = self._hash_request(endpoint, parameters, follow)
 
-        filename = os.path.join('data/', hashstr + '.json')
-        with open(filename, 'w') as f:
-            json.dump(responses_acc, f)
+        if os.path.isdir('data'):
+            filename = os.path.join('data/', hashstr + '.json')
+            with open(filename, 'w') as f:
+                json.dump(responses_acc, f)
 
         return responses_acc
 
